@@ -2,12 +2,16 @@ COMPOSE = docker-compose
 MVN = mvn
 BUILD=docker build -t
 
-IMAGE = nsunina/wavsep:v1.8.2
+IMAGE = nsunina/wavsep:v1.8.3
 DB_IMAGE=nsunina/wavsep-db:v1.8
 
 build:
 	$(BUILD) $(IMAGE) .
 	$(BUILD) $(DB_IMAGE) -f Dockerfile.sql .
+
+publish:
+	docker buildx build --platform linux/amd64,linux/arm64 -t $(IMAGE) --push .
+
 
 
 push: build
