@@ -1,7 +1,8 @@
 version: '3.6'
 services:
   wavsep:
-    image: nsunina/wavsep:v1.8.3
+    # Updated for the 1.8.4 benchmark replay validation release.
+    image: nsunina/wavsep:v1.8.4
     ports:
       - "18080:8080"
     links:
@@ -21,4 +22,3 @@ services:
       MYSQL_USER: 'wavsep'
       MYSQL_PASSWORD: 'wavsepPass782'
       MYSQL_DATABASE: 'wavsepDB'
-

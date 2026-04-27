@@ -1,47 +1,89 @@
-import os
+import argparse
+import json
 import sys
 
-import argparse
+from benchmark_requests import (
+    DEFAULT_BASE_URL,
+    DEFAULT_TIMEOUT_SECONDS,
+    load_catalog,
+    missing_webapp_requests,
+    trigger_requests,
+)
 
 
-from har_manager import send_from_har
-from my_har_parser import get_har_file, get_categories,get_har_sessions
+def _proxy_from_legacy_args(host, port):
+    if not host:
+        return None
+    if host.startswith("http://") or host.startswith("https://"):
+        return host
+    return "http://{}:{}".format(host, port)
 
 
-parser = argparse.ArgumentParser(description='Run crawler')
-parser.add_argument('host', nargs='?', default="")
-parser.add_argument('port', nargs='?', default="")
-parser.add_argument('category', nargs='?', default="")
-parser.add_argument('harfile', nargs='?', default="")
+def parse_args(argv):
+    parser = argparse.ArgumentParser(description="Trigger Reinforced WAVSEP HAR requests")
+    parser.add_argument("host", nargs="?", default="", help="Legacy proxy host")
+    parser.add_argument("port", nargs="?", default="", help="Legacy proxy port")
+    parser.add_argument("legacy_category", nargs="?", default="", help="Legacy HAR category")
+    parser.add_argument("legacy_har_file", nargs="?", default="", help="Legacy HAR file")
+    parser.add_argument("--base-url", default=DEFAULT_BASE_URL, help="Target WAVSEP base URL")
+    parser.add_argument("--proxy", default=None, help="Proxy URL used while replaying requests")
+    parser.add_argument("--category", default=None, help="Only trigger one HAR category")
+    parser.add_argument("--har-file", default=None, help="Only trigger one HAR file inside a category")
+    parser.add_argument("--include-duplicates", action="store_true", help="Replay duplicate HAR entries")
+    parser.add_argument("--dry-run", action="store_true", help="Print generated requests without sending")
+    parser.add_argument("--json", action="store_true", help="Print generated requests as JSON lines")
+    parser.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT_SECONDS, help="Request timeout")
+    parser.add_argument(
+        "--skip-webapp-validation",
+        action="store_true",
+        help="Do not fail when a HAR URL has no matching webapp resource",
+    )
+    return parser.parse_args(argv)
 
-args = parser.parse_args()
+
+def main(argv=None):
+    args = parse_args(argv or sys.argv[1:])
+    category = args.category or args.legacy_category or None
+    har_file = args.har_file or args.legacy_har_file or None
+    proxy = args.proxy or _proxy_from_legacy_args(args.host, args.port)
+
+    catalog = load_catalog(
+        category=category,
+        har_file=har_file,
+        deduplicate=not args.include_duplicates,
+    )
+
+    if not args.skip_webapp_validation:
+        missing_requests = missing_webapp_requests(catalog)
+        if missing_requests:
+            for request in missing_requests:
+                print(
+                    "[-] Missing webapp resource for {} {} from {}".format(
+                        request.method,
+                        request.path,
+                        request.har_file,
+                    ),
+                    file=sys.stderr,
+                )
+            return 1
+
+    results = trigger_requests(
+        catalog,
+        base_url=args.base_url,
+        proxy=proxy,
+        timeout=args.timeout,
+        dry_run=args.dry_run,
+    )
+
+    if args.dry_run or args.json:
+        for result in results:
+            print(json.dumps(result, sort_keys=True))
+
+    print("[+] Prepared {} request(s)".format(len(catalog)))
+    if not args.dry_run:
+        print("[+] Triggered {} request(s)".format(len(results)))
+    return 0
 
 
-
-
-def e():
-    sys.exit(-1)
-
-def usage():
-    print("[-] Usage: run_crawler.py <host> <port> <category> <harfile>")
-    e()
-
-har_sessions = {}
-if args.category == "":
-    print("har")
-    har_sessions = get_har_sessions()
-
-elif args.harfile == '':
-    har_sessions = get_har_sessions(args.category)
-
-else:
-    har_sessions[args.category] = [args.harfile]
-
-print("Sessions")
-print(har_sessions)
-for category, sessions in har_sessions.items():
-    for s in sessions:
-        filepath = get_har_file(category, s)
-        print(filepath)
-        print("[+] Scanning {} har file ".format(filepath))
-        send_from_har(filepath, "http://{}:{}".format(args.host, args.port) if args.host else None)
+if __name__ == "__main__":
+    sys.exit(main())

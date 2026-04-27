@@ -170,16 +170,20 @@ Although some of the test cases are vulnerable to additional exposures, the purp
 **Note:** To use SQLI labs correctly there is a .jsp page whose purpose is to create and populate the necessary database tables. To do this, visit the URL "**/wavsep/wavsep-install/install.jsp**", and follow instructions.   
 
 
-## Utility scripts   
-The repo includes a `utils` folder that contains several utility modules:  
-* A crawler that allows to run all the tests.  
-* A `print_requests.py` module that can be used to print all the requests.   
-* A `expected_results_generator.py` module that can be used to generate a `csv` file compliant with the OWASP Benchmarking Utility suite.   
+## Utility scripts
+The repo includes a `utils` folder that contains several utility modules:
+* A crawler that allows to run all the tests.
+* A `print_requests.py` module that can be used to print all the requests.
+* A `expected_results_generator.py` module that can be used to generate a `csv` file compliant with the OWASP Benchmarking Utility suite.
+* A request catalog shared by the crawler and tests. It parses every HAR file
+  from an absolute path, removes stale browser headers during replay, de-duplicates
+  repeated crawler captures by default, and validates that each request target
+  still exists under `src/main/webapp`.
 
 
 
-To run the crawler: 
-```  
+To run the crawler:
+```
 usage: run_crawler.py [-h] [proxy-host] [proxy-port] [category] [harfile]
 
 Run crawler
@@ -195,6 +199,29 @@ options:
 ```  
 
 The crawler requires a running instance on `localhost:18080`
+
+The crawler also supports explicit options for repeatable benchmark runs:
+```
+python3 utils/run_crawler.py --dry-run --json
+python3 utils/run_crawler.py --base-url http://127.0.0.1:18080
+python3 utils/run_crawler.py --category sql --har-file SInjection-Detection-Evaluation-GET-200Valid.har
+```
+
+By default the crawler triggers one request per unique HAR request shape. Use
+`--include-duplicates` when the original repeated crawler captures must be sent
+again. The `--dry-run --json` mode prints the generated replay requests without
+network side effects, which is useful before pointing a scanner or proxy at the
+benchmark.
+
+To validate the request corpus without starting WAVSEP:
+```
+make test-requests
+```
+
+The tests verify that every HAR entry parses, every generated request maps to an
+existing webapp resource, POST bodies and query strings are preserved, stale
+browser headers are stripped before replay, and the OWASP expected-results CSV
+covers all case requests.
 
 To print the requests:  
 ```  

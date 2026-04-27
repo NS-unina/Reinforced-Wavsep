@@ -6,7 +6,8 @@
 
     <groupId>com.nsunina</groupId>
     <artifactId>wavsep-enhancement</artifactId>
-    <version>1.8.3-SNAPSHOT</version>
+    <!-- Version bumped for the HAR request catalog and benchmark replay validation release. -->
+    <version>1.8.4-SNAPSHOT</version>
     <name>wavsep-enhancement</name>
     <packaging>war</packaging>
 

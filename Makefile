@@ -2,7 +2,7 @@ COMPOSE = docker-compose
 MVN = mvn
 BUILD=docker build -t
 
-IMAGE = nsunina/wavsep:v1.8.3
+IMAGE = nsunina/wavsep:v1.8.4
 DB_IMAGE=nsunina/wavsep-db:v1.8
 
 build:
@@ -36,3 +36,9 @@ rm:
 
 down: 
 	$(COMPOSE) down
+
+test-requests:
+	python3 -m unittest discover -s utils/tests -v
+
+dry-run-requests:
+	python3 utils/run_crawler.py --dry-run --json

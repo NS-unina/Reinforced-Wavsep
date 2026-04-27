@@ -5,7 +5,8 @@ services:
     ports:
       - "18080:8080"
     volumes: 
-      - ./target/wavsep-enhancement-1.8.3-SNAPSHOT.war:/usr/local/tomcat/webapps/wavsep.war
+      # Updated for the 1.8.4 benchmark replay validation release.
+      - ./target/wavsep-enhancement-1.8.4-SNAPSHOT.war:/usr/local/tomcat/webapps/wavsep.war
     links:
       - wavsepdb
   wavsepdb:
@@ -22,4 +23,3 @@ services:
       MYSQL_USER: 'wavsep'
       MYSQL_PASSWORD: 'wavsepPass782'
       MYSQL_DATABASE: 'wavsepDB'
-
